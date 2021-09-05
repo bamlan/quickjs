@@ -318,7 +318,7 @@ static const char main_c_template2[] =
     "    return 0;\n"
     "}\n";
 
-#define PROG_NAME "nqjsc"
+#define PROG_NAME "zqjsc"
 
 void help(void) {
     printf(
@@ -461,6 +461,11 @@ typedef enum {
     OUTPUT_EXECUTABLE,
 } OutputTypeEnum;
 
+const int Z_OUT_FLAG_NONE = 0;
+const int Z_OUT_FLAG_H = 1;
+const int Z_OUT_FLAG_C = 2;
+const int Z_OUT_FLAG_ALL = 3;
+
 int main(int argc, char** argv) {
     int c, i, verbose;
     const char *out_filename, *cname;
@@ -471,7 +476,7 @@ int main(int argc, char** argv) {
     JSContext* ctx;
     BOOL use_lto;
     /**0: no use; 1: output .h file; 2: output .c file; 3: output .h and .c file*/
-    int z_out_flag = 0;
+    int z_out_flag = Z_OUT_FLAG_NONE;
     int module;
     OutputTypeEnum output_type;
     size_t stack_size;
@@ -575,11 +580,11 @@ int main(int argc, char** argv) {
             break;
         case 'z': {
             if (!strcmp(optarg, "a")) {
-                z_out_flag = 3;
+                z_out_flag = Z_OUT_FLAG_ALL;
             } else if (!strcmp(optarg, "c")) {
-                z_out_flag = 2;
+                z_out_flag = Z_OUT_FLAG_C;
             } else if (!strcmp(optarg, "h")) {
-                z_out_flag = 1;
+                z_out_flag = Z_OUT_FLAG_H;
             } else {
                 fprintf(stderr, "unsupported -z%s\n\n", optarg);
                 help();
@@ -594,7 +599,7 @@ int main(int argc, char** argv) {
     if (optind >= argc)
         help();
 
-    if (z_out_flag == 0) {
+    if (z_out_flag == Z_OUT_FLAG_NONE) {
         if (!out_filename) {
             if (output_type == OUTPUT_EXECUTABLE) {
                 out_filename = "a.out";
@@ -783,7 +788,7 @@ int main(int argc, char** argv) {
         }
 #endif
 
-        if ((z_out_flag & 1) == 1) {
+        if ((z_out_flag & Z_OUT_FLAG_H) == Z_OUT_FLAG_H) {
             //output .h file
             fo = fopen(hfilename, "w");
             if (!fo) {
@@ -797,30 +802,30 @@ int main(int argc, char** argv) {
 
             fprintf(fo, "/* File generated automatically by the QuickJS compiler(-z output mode). */\n");
 
-            char C_HEADER_DEF[1024] = {'_', '_', 0};
+            char c_header_def[1024] = {'_', '_', 0};
             char* pcfile = strrchr(hfilename, '/');
             if (pcfile) {
                 pcfile++;
             } else {
                 pcfile = hfilename;
             }
-            pstrcpy(&C_HEADER_DEF[2], sizeof(C_HEADER_DEF) - 2, pcfile);
+            pstrcpy(&c_header_def[2], sizeof(c_header_def) - 2, pcfile);
 
-            for (int i = 2; i < (sizeof(C_HEADER_DEF) - 2); i++) {
-                if (C_HEADER_DEF[i] == '\0') {
-                    C_HEADER_DEF[i] = '_';
-                    C_HEADER_DEF[i + 1] = '_';
-                    C_HEADER_DEF[i + 2] = '\0';
+            for (int i = 2; i < (sizeof(c_header_def) - 2); i++) {
+                if (c_header_def[i] == '\0') {
+                    c_header_def[i] = '_';
+                    c_header_def[i + 1] = '_';
+                    c_header_def[i + 2] = '\0';
                     break;
-                } else if (C_HEADER_DEF[i] >= 'a' && C_HEADER_DEF[i] <= 'z') {
-                    C_HEADER_DEF[i] = toupper(C_HEADER_DEF[i]);
-                } else if ((C_HEADER_DEF[i] < '0' || C_HEADER_DEF[i] > '9') && (C_HEADER_DEF[i] < 'A' || C_HEADER_DEF[i] > 'Z')) {
-                    C_HEADER_DEF[i] = '_';
+                } else if (c_header_def[i] >= 'a' && c_header_def[i] <= 'z') {
+                    c_header_def[i] = toupper(c_header_def[i]);
+                } else if ((c_header_def[i] < '0' || c_header_def[i] > '9') && (c_header_def[i] < 'A' || c_header_def[i] > 'Z')) {
+                    c_header_def[i] = '_';
                 }
             }
 
-            fprintf(fo, "#ifndef %s\n", C_HEADER_DEF);
-            fprintf(fo, "#define %s\n\n", C_HEADER_DEF);
+            fprintf(fo, "#ifndef %s\n", c_header_def);
+            fprintf(fo, "#define %s\n\n", c_header_def);
 
             fprintf(fo, "#include \"quickjs-libc.h\"\n\n");
 
@@ -889,12 +894,12 @@ int main(int argc, char** argv) {
             fprintf(fo, "\n};\n");
             fprintf(fo, "const uint32_t z_qjsc_main_entry_size = %d;\n\n", main_entry_size);
 
-            fprintf(fo, "#endif //ifndef %s\n", C_HEADER_DEF);
+            fprintf(fo, "#endif //ifndef %s\n", c_header_def);
 
             fclose(fo);
         }
 
-        if ((z_out_flag & 2) == 2) {
+        if ((z_out_flag & Z_OUT_FLAG_C) == Z_OUT_FLAG_C) {
             //output.c file
             fo = fopen(cfilename, "w");
             if (!fo) {
@@ -904,7 +909,7 @@ int main(int argc, char** argv) {
             outfile = fo;
 
             fprintf(fo, "/* File generated automatically by the QuickJS compiler(-z output mode). */\n");
-            
+
             fprintf(fo, "#include \"%s\"\n\n", hfilename);
             fprintf(fo,
                     "static JSContext *JS_NewCustomContext(JSRuntime *rt)\n"
