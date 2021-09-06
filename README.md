@@ -24,7 +24,7 @@ zqjsc 独立输出 .c 和 .h文件可以让我们修改程序的c代与js代码�
 如果我们要开发一个运行在 linux 服务模式下的 quickjs 应用，可以参考以下步骤：
 
 * 示例步骤
-    1. 编写好 quickjs 环境下执行的 js 逻辑代码（js模块、js运行入口单元）, 或者写一个仅包含如 `print("helloword");` 的简单的 js 文件；
+    1. 编写好 quickjs 环境下执行的 js 逻辑代码（js模块、js运行入口单元）, 或者写一个仅包含如 `print("hello world");` 的简单的 js 文件；
  
     2. 运行 `zqjsc -za -o 程序名 js运行入口.js` , 会在当前目录下生成 `程序名.c` 和 `程序名.h` 两个文件；
     
